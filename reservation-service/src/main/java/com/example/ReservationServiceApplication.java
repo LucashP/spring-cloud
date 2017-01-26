@@ -5,6 +5,9 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.repository.query.Param;
+import org.springframework.data.rest.core.annotation.RepositoryRestResource;
+import org.springframework.data.rest.core.annotation.RestResource;
 import org.springframework.stereotype.Component;
 
 import javax.persistence.Entity;
@@ -34,12 +37,15 @@ class SampleDataCLR implements CommandLineRunner {
 	@Override
 	public void run(String... strings) throws Exception {
 		Stream.of("Josh", "Niyas", "Arand", "Lun", "Huiren", "Aditi", "Bertina", "Edward", "Andre", "Shaun").forEach(name -> reservationRepository.save(new Reservation(name)));
-		reservationRepository.findAll().stream().forEach(System.out::println) ;
+		reservationRepository.findAll().stream().forEach(System.out::println);
 	}
 }
 
+@RepositoryRestResource
 interface ReservationRepository extends JpaRepository<Reservation, Long> {
-	Collection<Reservation> findByReservationName(String rn);
+
+	@RestResource(path = "by-name")
+	Collection<Reservation> findByReservationName(@Param("name") String rn);
 }
 
 @Entity
