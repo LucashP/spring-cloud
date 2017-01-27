@@ -3,6 +3,8 @@ package com.example;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.actuate.health.Health;
+import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.repository.query.Param;
@@ -37,8 +39,18 @@ class SampleDataCLR implements CommandLineRunner {
 	@Override
 	public void run(String... strings) throws Exception {
 		Stream.of("Josh", "Niyas", "Arand", "Lun", "Huiren", "Aditi", "Bertina", "Edward", "Andre", "Shaun").forEach(name -> reservationRepository.save(new Reservation(name)));
-		reservationRepository.findAll().stream().forEach(System.out::println);
+		reservationRepository.findAll().forEach(System.out::println);
 	}
+}
+
+@Component
+class CustomHealthIndicator implements HealthIndicator {
+
+	@Override
+	public Health health() {
+		return Health.status("I <3 SG (and its food)").build();
+	}
+
 }
 
 @RepositoryRestResource
