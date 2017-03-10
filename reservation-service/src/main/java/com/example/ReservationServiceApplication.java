@@ -27,83 +27,91 @@ import java.util.stream.Stream;
 @SpringBootApplication
 public class ReservationServiceApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(ReservationServiceApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(ReservationServiceApplication.class, args);
+    }
 }
 
 @Component
 class SampleDataCLR implements CommandLineRunner {
 
-	private final ReservationRepository reservationRepository;
+    private final ReservationRepository reservationRepository;
 
-	@Autowired
-	public SampleDataCLR(ReservationRepository reservationRepository) {
-		this.reservationRepository = reservationRepository;
-	}
+    @Autowired
+    public SampleDataCLR(ReservationRepository reservationRepository) {
+        this.reservationRepository = reservationRepository;
+    }
 
-	@Override
-	public void run(String... strings) throws Exception {
-		Stream.of("Josh", "Niyas", "Arand", "Lun", "Huiren", "Aditi", "Bertina", "Edward", "Andre", "Shaun").forEach(name -> reservationRepository.save(new Reservation(name)));
-		reservationRepository.findAll().forEach(System.out::println);
-	}
+    @Override
+    public void run(String... strings) throws Exception {
+        Stream.of("Josh", "Niyas", "Arand", "Lun", "Huiren", "Aditi", "Bertina", "Edward", "Andre", "Shaun").forEach(name -> reservationRepository.save(new Reservation(name)));
+        reservationRepository.findAll().forEach(System.out::println);
+    }
 }
 
 @RestController
 @RefreshScope
 class MessageRestController {
 
-	private final String value;
+    private final String value;
 
-	public MessageRestController(@Value("${message}") String value) {
-		this.value = value;
-	}
+    public MessageRestController(@Value("${message}") String value) {
+        this.value = value;
+    }
 
-	@GetMapping(value = "/message")
-	public String read() {
-		return this.value;
-	}
+    @GetMapping(value = "/message")
+    public String read() {
+        return this.value;
+    }
 }
 
 
 @Component
 class CustomHealthIndicator implements HealthIndicator {
 
-	@Override
-	public Health health() {
-		return Health.status("I <3 SG (and its food)").build();
-	}
+    @Override
+    public Health health() {
+        return Health.status("I <3 SG (and its food)").build();
+    }
 
 }
 
 @RepositoryRestResource
 interface ReservationRepository extends JpaRepository<Reservation, Long> {
 
-	@RestResource(path = "by-name")
-	Collection<Reservation> findByReservationName(@Param("name") String rn);
+    @RestResource(path = "by-name")
+    Collection<Reservation> findByReservationName(@Param("name") String rn);
 }
 
 @Entity
 class Reservation {
 
-	@Id
-	@GeneratedValue
-	private Long id;
+    @Id
+    @GeneratedValue
+    private Long id;
 
-	private String reservationName;
+    private String reservationName;
 
-	public Reservation() {
-	}
+    public Reservation() {
+    }
 
-	public Reservation(String reservationName) {
-		this.reservationName = reservationName;
-	}
+    public Reservation(String reservationName) {
+        this.reservationName = reservationName;
+    }
 
-	@Override
-	public String toString() {
-		return "Reservation{" +
-				"id=" + id +
-				", reservationName='" + reservationName + '\'' +
-				'}';
-	}
+    public Long getId() {
+        return id;
+    }
+
+    public String getReservationName() {
+        return reservationName;
+    }
+
+    @Override
+    public String toString() {
+        return "Reservation{" +
+                "id=" + id +
+                ", reservationName='" + reservationName + '\'' +
+                '}';
+    }
 }
