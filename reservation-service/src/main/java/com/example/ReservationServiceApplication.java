@@ -9,10 +9,16 @@ import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
+import org.springframework.cloud.stream.annotation.EnableBinding;
+import org.springframework.cloud.stream.annotation.Input;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 import org.springframework.data.rest.core.annotation.RestResource;
+import org.springframework.integration.annotation.MessageEndpoint;
+import org.springframework.integration.annotation.ServiceActivator;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.SubscribableChannel;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -23,12 +29,35 @@ import javax.persistence.Id;
 import java.util.Collection;
 import java.util.stream.Stream;
 
+interface ReservationServiceChannels {
+    @Input
+    SubscribableChannel input();
+}
+
+@EnableBinding(ReservationServiceChannels.class)
 @EnableDiscoveryClient
 @SpringBootApplication
 public class ReservationServiceApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(ReservationServiceApplication.class, args);
+    }
+}
+
+
+@MessageEndpoint
+class ReservationProcessor {
+
+    private final ReservationRepository reservationRepository;
+
+    @Autowired
+    public ReservationProcessor(ReservationRepository reservationRepository) {
+        this.reservationRepository = reservationRepository;
+    }
+
+    @ServiceActivator(inputChannel = "input")
+    public void onNewReservations(Message<String> msg) {
+        this.reservationRepository.save(new Reservation(msg.getPayload()));
     }
 }
 
