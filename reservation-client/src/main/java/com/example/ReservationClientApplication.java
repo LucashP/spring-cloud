@@ -7,14 +7,13 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.circuitbreaker.EnableCircuitBreaker;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
+import org.springframework.cloud.netflix.feign.EnableFeignClients;
+import org.springframework.cloud.netflix.feign.FeignClient;
 import org.springframework.cloud.netflix.zuul.EnableZuulProxy;
 import org.springframework.cloud.stream.annotation.EnableBinding;
 import org.springframework.cloud.stream.annotation.Output;
 import org.springframework.context.annotation.Bean;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.hateoas.Resources;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.support.MessageBuilder;
@@ -33,6 +32,14 @@ interface ReservationClientChannels {
     MessageChannel output();
 }
 
+@FeignClient("reservation-service")
+interface ReservationReader {
+
+    @RequestMapping(method = RequestMethod.GET, value = "/reservations")
+    Resources<Reservation> read();
+}
+
+@EnableFeignClients
 @EnableBinding(ReservationClientChannels.class)
 @EnableCircuitBreaker
 @EnableZuulProxy
@@ -55,12 +62,12 @@ public class ReservationClientApplication {
 @RequestMapping("/reservations")
 class ReservationApiGatewayRestController {
 
-    private final RestTemplate restTemplate;
+    private final ReservationReader reservationReader;
     private final MessageChannel out;
 
     @Autowired
-    ReservationApiGatewayRestController(RestTemplate restTemplate, ReservationClientChannels clientChannels) {
-        this.restTemplate = restTemplate;
+    ReservationApiGatewayRestController(ReservationClientChannels clientChannels, ReservationReader reservationReader) {
+        this.reservationReader = reservationReader;
         this.out = clientChannels.output();
     }
 
@@ -78,15 +85,8 @@ class ReservationApiGatewayRestController {
     @HystrixCommand(fallbackMethod = "fallback")
     @RequestMapping(method = RequestMethod.GET, value = "/names")
     public Collection<String> names() {
-
-        ParameterizedTypeReference<Resources<Reservation>> ptr =
-                new ParameterizedTypeReference<Resources<Reservation>>() {
-                };
-
-        ResponseEntity<Resources<Reservation>> responseEntity = this.restTemplate.exchange("http://reservation-service/reservations",
-                HttpMethod.GET, null, ptr);
-
-        return responseEntity.getBody().getContent()
+        return reservationReader.read()
+                .getContent()
                 .stream()
                 .map(Reservation::getReservationName)
                 .collect(Collectors.toList());
