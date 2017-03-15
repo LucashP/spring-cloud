@@ -14,9 +14,10 @@ import org.springframework.cloud.stream.annotation.EnableBinding;
 import org.springframework.cloud.stream.annotation.Output;
 import org.springframework.context.annotation.Bean;
 import org.springframework.hateoas.Resources;
-import org.springframework.messaging.Message;
+import org.springframework.integration.annotation.Gateway;
+import org.springframework.integration.annotation.IntegrationComponentScan;
+import org.springframework.integration.annotation.MessagingGateway;
 import org.springframework.messaging.MessageChannel;
-import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -39,6 +40,14 @@ interface ReservationReader {
     Resources<Reservation> read();
 }
 
+@MessagingGateway
+interface ReservationWriter {
+
+    @Gateway(requestChannel = "output")
+    void write(String rn);
+}
+
+@IntegrationComponentScan
 @EnableFeignClients
 @EnableBinding(ReservationClientChannels.class)
 @EnableCircuitBreaker
@@ -63,19 +72,17 @@ public class ReservationClientApplication {
 class ReservationApiGatewayRestController {
 
     private final ReservationReader reservationReader;
-    private final MessageChannel out;
+    private final ReservationWriter reservationWriter;
 
     @Autowired
-    ReservationApiGatewayRestController(ReservationClientChannels clientChannels, ReservationReader reservationReader) {
+    ReservationApiGatewayRestController(ReservationReader reservationReader, ReservationWriter reservationWriter) {
         this.reservationReader = reservationReader;
-        this.out = clientChannels.output();
+        this.reservationWriter = reservationWriter;
     }
 
     @RequestMapping(method = RequestMethod.POST)
     public void write(@RequestBody Reservation reservation) {
-        String reservationName = reservation.getReservationName();
-        Message<String> msg = MessageBuilder.withPayload(reservationName).build();
-        this.out.send(msg);
+        this.reservationWriter.write(reservation.getReservationName());
     }
 
     public Collection<String> fallback() {
